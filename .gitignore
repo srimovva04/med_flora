@@ -1,0 +1,50 @@
+# ===================================================================
+# SECRETS - Most important section. Never commit secret keys.
+# ===================================================================
+.env
+
+
+# ===================================================================
+# FLUTTER / DART
+# ===================================================================
+# Build artifacts
+/build/
+
+# Packages and dependencies
+/.dart_tool/
+/.packages
+/.flutter-plugins
+/.flutter-plugins-dependencies
+
+# Note: pubspec.lock is NOT ignored. For applications, it's a best practice 
+# to commit this file to ensure everyone on the team has the exact same 
+# package versions.
+
+
+# ===================================================================
+# PYTHON
+# ===================================================================
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment folders
+venv/
+env/
+.venv/
+
+
+# ===================================================================
+# IDEs AND EDITORS - Personal settings for your code editor.
+# ===================================================================
+.idea/
+.vscode/
+
+
+# ===================================================================
+# OPERATING SYSTEM FILES - General clutter from different OSes.
+# ===================================================================
+.DS_Store
+Thumbs.db

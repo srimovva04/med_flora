@@ -1,0 +1,21 @@
+# This version attribute is obsolete and can be removed
+# version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: flask-backend
+    ports:
+      - "5000:5000"
+    # Add any environment variables here if needed
+    env_file:
+      - .env
+    
+
+  frontend:
+    build: ./flutter_app
+    container_name: flutter-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
