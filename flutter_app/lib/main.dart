@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'functionality_page.dart';
 import 'landing_page.dart';
 
 void main() {
@@ -14,7 +15,7 @@ class PlantApp extends StatelessWidget {
       theme: ThemeData(
         primaryColor: const Color(0xFF16666B), // Theme color
       ),
-      home: LandingPage(),
+      home: FunctionalityPage(),
     );
   }
 }
