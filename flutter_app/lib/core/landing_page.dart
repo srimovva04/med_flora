@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'functionality_page.dart';
+import '../plant_identification/functionality_page.dart';
 
 class LandingPage extends StatefulWidget {
   @override

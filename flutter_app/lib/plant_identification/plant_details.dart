@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../specialist/availability_map.dart';
+
 class PlantDetailsPage extends StatelessWidget {
   final Map<String, dynamic> plantData;
 
@@ -10,24 +12,32 @@ class PlantDetailsPage extends StatelessWidget {
     final Color primaryColor = Theme.of(context).primaryColor;
     final Color cardBackgroundColor = Colors.green.shade50.withOpacity(0.6);
 
-    // --- Data Extraction Updated for the New Response ---
-    final String plantName = plantData['name'] ?? 'Plant Details';
-    final String description = plantData['description'] ?? 'No description available.';
-    final String uses = plantData['uses'] ?? 'No uses listed.';
-    // Handles the list of varieties from the new JSON
-    final String varieties = (plantData['varieties'] as List<dynamic>?)
-        ?.join(', ') ?? 'No varieties listed.';
-    final String medicinalBenefits = plantData['natural_medicinal_benefits'] ?? 'No benefits listed.';
-    final String pharmaUses = plantData['pharmaceutical_uses'] ?? 'No pharmaceutical uses listed.';
-    // Handles the list of locations from the new JSON
-    final String locations = (plantData['locations_in_india'] as List<dynamic>?)
-        ?.join(', ') ?? 'No locations specified.';
-    final String plantHeight = plantData['plant_height'] ?? 'N/A';
-    final String temperature = plantData['climate']?['temperature'] ?? 'N/A';
-    final String soilType = plantData['soil_conditions']?['type'] ?? 'N/A';
-    final String composition = plantData['chemical_composition'] ?? 'Composition not available.';
+    // --- DATA EXTRACTION MAPPED TO THE NEW EXCEL STRUCTURE ---
 
-    final String growingConditions = 'Thrives in temperatures of $temperature with $soilType. Plant height: $plantHeight.';
+    // Use 'Common Name' for the title, with a fallback to 'Scientific Name'
+    final String plantName = plantData['Common Name']?.toString() ??
+        plantData['Scientific Name']?.toString() ??
+        'Plant Details';
+
+    // Data for the 'General Info' tab
+    final String scientificName = plantData['Scientific Name']?.toString() ?? 'N/A';
+    final String kingdom = plantData['Kingdom']?.toString() ?? 'N/A';
+    final String classificationInfo = 'Kingdom: $kingdom\nScientific Name: $scientificName';
+
+    // Create a concise description, as the therapeutic uses are very long
+    final String description = 'A plant from the $kingdom kingdom, scientifically known as $scientificName. '
+        'It is widely recognized for its extensive therapeutic applications and rich phytochemical profile.';
+
+    // Data for the 'Therapeutic Use' tab
+    final String therapeuticUses = plantData['Therapeutic Uses']?.toString() ?? 'No therapeutic uses listed.';
+
+    // Data for the 'Growing & Location' tab
+    final String locations = plantData['Statewise Availability']?.toString() ?? 'No locations specified.';
+    const String growingConditions = 'Detailed growing conditions for this plant are not available in the database.';
+
+    // Data for the 'Composition' tab
+    final String phytochemicals = plantData['Phytochemicals']?.toString() ?? 'Composition not available.';
+
 
     return DefaultTabController(
       length: 4,
@@ -48,7 +58,7 @@ class PlantDetailsPage extends StatelessWidget {
             tabs: const [
               Tab(text: 'General Info'),
               Tab(text: 'Therapeutic Use'),
-              Tab(text: 'Growing & Location'),
+              Tab(text: 'Location'),
               Tab(text: 'Composition'),
             ],
           ),
@@ -61,19 +71,12 @@ class PlantDetailsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSimpleCard(
-                    context: context,
-                    icon: Icons.restaurant,
-                    title: 'Common Uses',
-                    content: uses, // Updated content
-                    backgroundColor: cardBackgroundColor,
-                  ),
-                  const SizedBox(height: 16),
+                  // Repurposed this card to show classification info
                   _buildSimpleCard(
                     context: context,
                     icon: Icons.eco,
-                    title: 'Varieties',
-                    content: varieties, // Updated content
+                    title: 'Classification',
+                    content: classificationInfo,
                     backgroundColor: cardBackgroundColor,
                   ),
                   const SizedBox(height: 24),
@@ -85,7 +88,7 @@ class PlantDetailsPage extends StatelessWidget {
                       border: Border.all(color: primaryColor.withOpacity(0.3)),
                     ),
                     child: Text(
-                      description, // Updated content
+                      description, // Displaying the generated summary
                       style: TextStyle(
                         color: Colors.grey.shade700,
                         height: 1.5,
@@ -106,41 +109,14 @@ class PlantDetailsPage extends StatelessWidget {
                   _buildBenefitCard(
                     context: context,
                     icon: Icons.favorite_border_outlined,
-                    title: 'Natural Medicinal Benefits',
-                    content: medicinalBenefits, // Updated content
+                    title: 'Therapeutic Uses',
+                    content: therapeuticUses, // Displaying the full list of uses
                     backgroundColor: cardBackgroundColor,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.green.shade100, Colors.green.shade50],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.green.shade700),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            pharmaUses, // Updated content
-                            style: TextStyle(
-                              color: Colors.green.shade700,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
             ),
-            // 3. Growing & Location Tab
+            // 3. Location Tab
             SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -149,21 +125,64 @@ class PlantDetailsPage extends StatelessWidget {
                   _buildLocationCard(
                     context: context,
                     icon: Icons.location_on,
-                    title: 'Growing Regions in India',
-                    content: locations, // Updated content
+                    title: 'Statewise Availability in India',
+                    content: locations,
                     backgroundColor: cardBackgroundColor,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+                  // ADD THIS BUTTON
+                  Center(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text('View on Map'),
+                      onPressed: () {
+                        // Navigate to the new map page
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => AvailabilityMapPage(
+                              plantName: plantName,
+                              locations: locations,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   _buildLocationCard(
                     context: context,
                     icon: Icons.wb_sunny,
                     title: 'Growing Conditions',
-                    content: growingConditions, // Updated content
+                    content: 'Detailed growing conditions are not available.', // Fallback
                     backgroundColor: cardBackgroundColor,
                   ),
                 ],
               ),
             ),
+
+            // SingleChildScrollView(
+            //   padding: const EdgeInsets.all(20.0),
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //     children: [
+            //       _buildLocationCard(
+            //         context: context,
+            //         icon: Icons.location_on,
+            //         title: 'Statewise Availability in India',
+            //         content: locations, // Displaying locations
+            //         backgroundColor: cardBackgroundColor,
+            //       ),
+            //       const SizedBox(height: 16),
+            //       _buildLocationCard(
+            //         context: context,
+            //         icon: Icons.wb_sunny,
+            //         title: 'Growing Conditions',
+            //         content: growingConditions, // Fallback message
+            //         backgroundColor: cardBackgroundColor,
+            //       ),
+            //     ],
+            //   ),
+            // ),
             // 4. Composition Tab
             SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
@@ -173,8 +192,8 @@ class PlantDetailsPage extends StatelessWidget {
                   _buildSimpleCard(
                     context: context,
                     icon: Icons.science_outlined,
-                    title: 'Chemical Composition',
-                    content: composition, // Updated content
+                    title: 'Phytochemicals',
+                    content: phytochemicals, // Displaying phytochemicals
                     backgroundColor: cardBackgroundColor,
                   ),
                 ],
@@ -186,7 +205,7 @@ class PlantDetailsPage extends StatelessWidget {
     );
   }
 
-  // --- Helper Widgets (No changes needed here) ---
+  // --- Helper Widgets (No changes needed here, they are reusable) ---
 
   Widget _buildSimpleCard({
     required BuildContext context,
@@ -195,6 +214,7 @@ class PlantDetailsPage extends StatelessWidget {
     required String content,
     required Color backgroundColor,
   }) {
+    // ... This widget remains unchanged
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -256,6 +276,7 @@ class PlantDetailsPage extends StatelessWidget {
     required String content,
     required Color backgroundColor,
   }) {
+    // ... This widget remains unchanged
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -317,6 +338,7 @@ class PlantDetailsPage extends StatelessWidget {
     required String content,
     required Color backgroundColor,
   }) {
+    // ... This widget remains unchanged
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -371,8 +393,6 @@ class PlantDetailsPage extends StatelessWidget {
     );
   }
 }
-
-
 
 
 

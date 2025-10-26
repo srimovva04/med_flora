@@ -44,7 +44,12 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   google_fonts: ^6.2.1
-
+  excel: ^4.0.6
+  diacritic: ^0.1.6
+  shared_preferences: ^2.5.3
+  provider: ^6.1.5+1
+  polylabel: ^1.0.1
+  geolocator: ^14.0.2
 
 
 dev_dependencies:
@@ -80,6 +85,7 @@ flutter:
   assets:
     - assets/plants.json
     - assets/logo.png
+    - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
