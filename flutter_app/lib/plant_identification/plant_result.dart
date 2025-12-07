@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show ByteData, rootBundle;
 import 'package:excel/excel.dart' as excel;
+
 import 'plant_details.dart';
 
 class PlantResultPage extends StatefulWidget {
@@ -63,34 +64,47 @@ class _PlantResultPageState extends State<PlantResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool hasImage = widget.imageUrl.isNotEmpty && widget.imageUrl != 'null';
+
     return Scaffold(
+      // extendBodyBehindAppBar is crucial for the transparent/gradient look
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Identification Result"),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: hasImage ? Colors.black87 : Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: hasImage
+            ? const Text("Identification Result", style: TextStyle(color: Colors.black87))
+            : const Text("Identification Result", style: TextStyle(color: Colors.white)),
+        centerTitle: true,
       ),
-      extendBodyBehindAppBar: true,
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _plantDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (snapshot.hasError) {
-            return Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text("Error: ${snapshot.error}", textAlign: TextAlign.center)));
+            return Center(child: Text("Error: ${snapshot.error}"));
           }
-          if (!snapshot.hasData || snapshot.data == null) {
-            return Center(child: Text('Details for "${widget.plantName}" not found.', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)));
-          }
-          final plantData = snapshot.data!;
+
+          // Prepare data (Found or Not Found)
+          final plantData = snapshot.data ?? {
+            "Common Name": widget.plantName,
+            "Scientific Name": "Not found in database",
+            "Kingdom": "Unknown"
+          };
+
+          final bool isNotFound = snapshot.data == null;
+
           return PlantResultView(
             plantData: plantData,
             imageUrl: widget.imageUrl,
+            isNotFound: isNotFound,
           );
         },
       ),
@@ -101,62 +115,37 @@ class _PlantResultPageState extends State<PlantResultPage> {
 class PlantResultView extends StatelessWidget {
   final Map<String, dynamic> plantData;
   final String imageUrl;
+  final bool isNotFound;
 
   const PlantResultView({
     super.key,
     required this.plantData,
     required this.imageUrl,
+    this.isNotFound = false,
   });
-
-  Widget _buildDetailCard({required IconData icon, required String label, required String value}) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white.withOpacity(0.85),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.green.shade700, size: 28),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    final String scientificName = plantData["Scientific Name"]?.toString() ?? "N/A";
-    final String kingdom = plantData["Kingdom"]?.toString() ?? "N/A";
+    bool hasImage = imageUrl.isNotEmpty && imageUrl != 'null';
+
+    // SWITCH LOGIC: Check if image exists and return the specific layout
+    if (hasImage) {
+      return _buildLayoutWithImage(context);
+    } else {
+      return _buildLayoutNoImage(context);
+    }
+  }
+
+  // ===========================================================================
+  // LAYOUT 1: IMAGE EXISTS (Circle Avatar, Centered Text, Gradient BG)
+  // ===========================================================================
+  Widget _buildLayoutWithImage(BuildContext context) {
     final String commonName = plantData["Common Name"]?.toString() ?? "Unknown Plant";
+    final String scientificName = plantData["Scientific Name"]?.toString() ?? "";
+    final String kingdom = plantData["Kingdom"]?.toString() ?? "N/A";
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.green.shade100, Colors.teal.shade50, Colors.white],
@@ -168,9 +157,10 @@ class PlantResultView extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceAround, // Distribute space
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 1. Circle Avatar
               Column(
                 children: [
                   Container(
@@ -192,87 +182,194 @@ class PlantResultView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Prediction',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black54,
-                    ),
-                  ),
+                  const Text('Prediction', style: TextStyle(fontSize: 16, color: Colors.black54)),
                   Text(
                     commonName,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
+
+              // 2. Details
               Column(
                 children: [
-                  _buildDetailCard(
-                    icon: Icons.grass,
-                    label: "Common Name",
-                    value: commonName,
-                  ),
+                  _buildDetailCard(Icons.grass, "Common Name", commonName),
                   const SizedBox(height: 12),
-                  _buildDetailCard(
-                    icon: Icons.science_outlined,
-                    label: "Scientific Name",
-                    value: scientificName,
-                  ),
+                  _buildDetailCard(Icons.science_outlined, "Scientific Name", scientificName),
                   const SizedBox(height: 12),
-                  _buildDetailCard(
-                    icon: Icons.account_tree_outlined,
-                    label: "Kingdom",
-                    value: kingdom,
-                  ),
+                  _buildDetailCard(Icons.account_tree_outlined, "Kingdom", kingdom),
                 ],
               ),
-              Column(
-                children: [
-                  // --- ✅ CORRECTION AND STYLING APPLIED HERE ---
-                  ElevatedButton(
-                    // style: ElevatedButton.styleFrom(
-                    //   foregroundColor: Colors.white,
-                    //   backgroundColor: Colors.green.shade600,
-                    //   padding: const EdgeInsets.symmetric(vertical: 14),
-                    //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    //   elevation: 4,
-                    // ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PlantDetailsPage(plantData: plantData),
-                        ),
-                      );
-                    },
-                    child: const Text('View Details', style: TextStyle(fontSize: 16)),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: Text(
-                      "AI predictions may not always be accurate. Please verify.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade700),
-                    ),
-                  ),
-                ],
-              ),
+
+              // 3. Button
+              if (!isNotFound)
+                ElevatedButton(
+                  onPressed: () => _navigateToDetails(context),
+                  child: const Text('View Details'),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildLayoutNoImage(BuildContext context) {
+    final String commonName = plantData["Common Name"]?.toString() ?? "Unknown Plant";
+    final String scientificName = plantData["Scientific Name"]?.toString() ?? "";
+    final String kingdom = plantData["Kingdom"]?.toString() ?? "N/A";
+
+    return Column(
+      children: [
+        // 1. Solid Green Header (Matches your screenshot)
+        Expanded(
+          flex: 4,
+          child: Container(
+            width: double.infinity,
+            color: const Color(0xFF388E3C), // Material Green 700
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 20,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        commonName,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Scientific Name: $scientificName",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // 2. Body Details (White background)
+        Expanded(
+          flex: 6,
+          child: Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                if (isNotFound)
+                  Card(
+                    color: Colors.orange.shade50,
+                    child: const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber, color: Colors.orange),
+                          SizedBox(width: 10),
+                          Expanded(child: Text("Details not found in our database.")),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  _buildDetailRowSimple(Icons.grass, "Common Name", commonName),
+                  const Divider(),
+                  _buildDetailRowSimple(Icons.science, "Scientific Name", scientificName),
+                  const Divider(),
+                  _buildDetailRowSimple(Icons.account_tree, "Kingdom", kingdom),
+                  const Spacer(),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF388E3C),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    onPressed: () => _navigateToDetails(context),
+                    child: const Text("View Full Details"),
+                  ),
+                  const SizedBox(height: 20),
+                ]
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- Helper Methods ---
+
+  void _navigateToDetails(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PlantDetailsPage(plantData: plantData),
+      ),
+    );
+  }
+
+  // Card Style (Used in Circle Layout)
+  Widget _buildDetailCard(IconData icon, String label, String value) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white.withOpacity(0.85),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.green.shade700, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                  Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Simple Row Style (Used in Green Header Layout)
+  Widget _buildDetailRowSimple(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF388E3C)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
 }
-
-
-
-
-
 
 
 
@@ -608,5 +705,3 @@ class PlantResultView extends StatelessWidget {
 //   }
 // }
 //
-
-
